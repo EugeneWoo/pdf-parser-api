@@ -75,7 +75,12 @@ def parse_pdf():
             ],
         )
 
-        result_text = message.content[0].text
+        result_text = message.content[0].text.strip()
+        if result_text.startswith("```"):
+            result_text = result_text.split("```", 2)[1]
+            if result_text.startswith("json"):
+                result_text = result_text[4:]
+            result_text = result_text.rsplit("```", 1)[0].strip()
 
         # Validate the response to detect corrupted/unreadable files
         try:
