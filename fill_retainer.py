@@ -1,12 +1,28 @@
 import os
 import base64
 import io
+import re
+from datetime import datetime
 from docx import Document
 from flask import Blueprint, request, jsonify
 
 fill_retainer_bp = Blueprint("fill_retainer", __name__)
 
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "retainer_template.docx")
+
+
+def normalize_date(raw: str) -> str:
+    """Coerce any date-like string to YYYY-MM-DD."""
+    if not raw:
+        return raw
+    # Already YYYY-MM-DD
+    if re.match(r"^\d{4}-\d{2}-\d{2}$", raw):
+        return raw
+    # ISO 8601 timestamp e.g. 2018-12-06T05:00:00.000Z
+    try:
+        return datetime.fromisoformat(raw.replace("Z", "+00:00")).strftime("%Y-%m-%d")
+    except (ValueError, AttributeError):
+        return raw
 
 
 def build_injury_paragraph(data, num_injured):
@@ -57,7 +73,7 @@ def fill_retainer():
 
     replacements = {
         "client_name": f"{parse_data['client_first_name']} {parse_data['client_last_name']}",
-        "accident_date": parse_data["Accident Date"],
+        "accident_date": normalize_date(parse_data["Accident Date"]),
         "defendant_name": parse_data["Defendant Name"],
         "pronoun_his_her": "his" if gender == "M" else "her",
         "pronoun_he_she": "he" if gender == "M" else "she",
@@ -66,7 +82,7 @@ def fill_retainer():
         "client_plate": parse_data["Client Plate Number"],
         "accident_description": parse_data["Accident Description"],
         "injury_paragraph": build_injury_paragraph(parse_data, num_injured),
-        "sol_date": parse_data["Statute of Limitations Date"],
+        "sol_date": normalize_date(parse_data["Statute of Limitations Date"]),
     }
 
     for para in doc.paragraphs:
