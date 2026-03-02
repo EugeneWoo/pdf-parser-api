@@ -14,7 +14,7 @@ SYSTEM_PROMPT = """You are a legal data extraction assistant. Extract structured
 - Client Plate Number (Vehicle 1 plate — the plaintiff; left side of form)
 - Defendant Name (LAST, FIRST format)
 - Defendant Plate Number (Vehicle 2 plate)
-- Num Injured (integer — count of persons noted as injured in report)
+- Num Injured (integer; extract from "No. Injured" field top of form)
 - Client Gender (M or F — gender of Vehicle 1 driver; left side of form)
 - Statute of Limitations Date (Accident Date + 8 years, YYYY-MM-DD)
 - client_last_name (plaintiff last name, UPPERCASE)
