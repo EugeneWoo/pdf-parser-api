@@ -2,8 +2,10 @@ import os
 import base64
 import anthropic
 from flask import Flask, request, jsonify
+from fill_retainer import fill_retainer_bp
 
 app = Flask(__name__)
+app.register_blueprint(fill_retainer_bp)
 client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
 SYSTEM_PROMPT = """You are a legal data extraction assistant. Extract structured data from police reports for a personal injury law firm. Return ONLY a valid JSON object with these exact keys:
