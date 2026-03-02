@@ -36,34 +36,47 @@ def parse_pdf():
 
     pdf_file = request.files["file"]
     pdf_bytes = pdf_file.read()
+
+    if len(pdf_bytes) == 0:
+        return jsonify({"error": "File is empty"}), 400
+
     pdf_base64 = base64.standard_b64encode(pdf_bytes).decode("utf-8")
 
-    message = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=1024,
-        system=SYSTEM_PROMPT,
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "document",
-                        "source": {
-                            "type": "base64",
-                            "media_type": "application/pdf",
-                            "data": pdf_base64,
+    try:
+        message = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=1024,
+            system=SYSTEM_PROMPT,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "document",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "application/pdf",
+                                "data": pdf_base64,
+                            },
                         },
-                    },
-                    {
-                        "type": "text",
-                        "text": "Extract all required fields from this police report and return the JSON object.",
-                    },
-                ],
-            }
-        ],
-    )
+                        {
+                            "type": "text",
+                            "text": "Extract all required fields from this police report and return the JSON object.",
+                        },
+                    ],
+                }
+            ],
+        )
+        return jsonify({"result": message.content[0].text})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-    return jsonify({"result": message.content[0].text})
+
+@app.route("/debug", methods=["POST"])
+def debug():
+    files_info = {k: {"size": len(v.read()), "content_type": v.content_type, "filename": v.filename} for k, v in request.files.items()}
+    form_info = {k: v for k, v in request.form.items()}
+    return jsonify({"files": files_info, "form": form_info, "content_type": request.content_type})
 
 
 @app.route("/health", methods=["GET"])
