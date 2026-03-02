@@ -12,13 +12,12 @@ TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "retainer_template.docx"
 def build_injury_paragraph(data, num_injured):
     """Build the injury paragraph based on whether there were injuries."""
     if num_injured > 0:
-        return (f"{data.get('Accident Description', '')} Additionally, since the motor vehicle accident "
-                f"involved an injured person, Attorney will also investigate potential bodily injury claims "
-                f"and review relevant medical records to substantiate non-economic damages.")
+        return ("Additionally, since the motor vehicle accident involved an injured person, Attorney will "
+                "also investigate potential bodily injury claims and review relevant medical records "
+                "to substantiate non-economic damages.")
     else:
-        return (f"{data.get('Accident Description', '')} However, since the motor vehicle accident "
-                f"involved no reported injured people, the scope of this engagement is strictly limited "
-                f"to the recovery of property damage and loss of use.")
+        return ("However, since the motor vehicle accident involved no reported injured people, the scope "
+                "of this engagement is strictly limited to the recovery of property damage and loss of use.")
 
 
 @fill_retainer_bp.route("/fill-retainer", methods=["POST"])
@@ -43,12 +42,14 @@ def fill_retainer():
     doc = Document(TEMPLATE_PATH)
 
     def replace_in_paragraph(para, replacements):
+        """Replace placeholders that may span multiple runs."""
         for key, val in replacements.items():
             placeholder = "{{" + key + "}}"
-            if placeholder in para.text:
-                for run in para.runs:
-                    if placeholder in run.text:
-                        run.text = run.text.replace(placeholder, val)
+            if placeholder not in para.text:
+                continue
+
+            # Replace in the full paragraph text
+            para.text = para.text.replace(placeholder, val)
 
     # Transform data from /parse format to template format
     gender = parse_data.get("Client Gender", "M").upper()
@@ -63,6 +64,7 @@ def fill_retainer():
         "pronoun_him_her": "him" if gender == "M" else "her",
         "accident_location": parse_data["Accident Location"],
         "client_plate": parse_data["Client Plate Number"],
+        "accident_description": parse_data["Accident Description"],
         "injury_paragraph": build_injury_paragraph(parse_data, num_injured),
         "sol_date": parse_data["Statute of Limitations Date"],
     }
