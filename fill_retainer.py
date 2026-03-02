@@ -9,15 +9,31 @@ fill_retainer_bp = Blueprint("fill_retainer", __name__)
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "retainer_template.docx")
 
 
+def build_injury_paragraph(data, num_injured):
+    """Build the injury paragraph based on whether there were injuries."""
+    if num_injured > 0:
+        return (f"{data.get('Accident Description', '')} Additionally, since the motor vehicle accident "
+                f"involved an injured person, Attorney will also investigate potential bodily injury claims "
+                f"and review relevant medical records to substantiate non-economic damages.")
+    else:
+        return (f"{data.get('Accident Description', '')} However, since the motor vehicle accident "
+                f"involved no reported injured people, the scope of this engagement is strictly limited "
+                f"to the recovery of property damage and loss of use.")
+
+
 @fill_retainer_bp.route("/fill-retainer", methods=["POST"])
 def fill_retainer():
     data = request.get_json(silent=True)
     if not data:
         return jsonify({"error": "JSON body required"}), 400
 
-    required = ["client_name", "accident_date", "defendant_name", "pronoun_his_her",
-                "pronoun_he_she", "accident_location", "client_plate", "injury_paragraph", "sol_date"]
-    missing = [k for k in required if k not in data]
+    # Accept either direct data or data wrapped in "data" key from /parse endpoint
+    parse_data = data.get("data", data)
+
+    required = ["client_first_name", "client_last_name", "Accident Date", "Defendant Name",
+                "Client Gender", "Accident Location", "Client Plate Number",
+                "Accident Description", "Num Injured", "Statute of Limitations Date"]
+    missing = [k for k in required if k not in parse_data]
     if missing:
         return jsonify({"error": f"Missing fields: {missing}"}), 400
 
@@ -34,17 +50,21 @@ def fill_retainer():
                     if placeholder in run.text:
                         run.text = run.text.replace(placeholder, val)
 
+    # Transform data from /parse format to template format
+    gender = parse_data.get("Client Gender", "M").upper()
+    num_injured = parse_data.get("Num Injured", 0)
+
     replacements = {
-        "client_name": data["client_name"],
-        "accident_date": data["accident_date"],
-        "defendant_name": data["defendant_name"],
-        "pronoun_his_her": data["pronoun_his_her"],
-        "pronoun_he_she": data["pronoun_he_she"],
-        "pronoun_him_her": data.get("pronoun_him_her", data["pronoun_his_her"]),
-        "accident_location": data["accident_location"],
-        "client_plate": data["client_plate"],
-        "injury_paragraph": data["injury_paragraph"],
-        "sol_date": data["sol_date"],
+        "client_name": f"{parse_data['client_first_name']} {parse_data['client_last_name']}",
+        "accident_date": parse_data["Accident Date"],
+        "defendant_name": parse_data["Defendant Name"],
+        "pronoun_his_her": "his" if gender == "M" else "her",
+        "pronoun_he_she": "he" if gender == "M" else "she",
+        "pronoun_him_her": "him" if gender == "M" else "her",
+        "accident_location": parse_data["Accident Location"],
+        "client_plate": parse_data["Client Plate Number"],
+        "injury_paragraph": build_injury_paragraph(parse_data, num_injured),
+        "sol_date": parse_data["Statute of Limitations Date"],
     }
 
     for para in doc.paragraphs:
