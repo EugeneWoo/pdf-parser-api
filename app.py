@@ -1,5 +1,6 @@
 import os
 import base64
+import json
 import anthropic
 from flask import Flask, request, jsonify
 from fill_retainer import fill_retainer_bp
@@ -14,7 +15,7 @@ SYSTEM_PROMPT = """You are a legal data extraction assistant. Extract structured
 - Accident Location (street address or intersection; lower half of doc)
 - Accident Description (1-2 sentence factual summary of how the accident occurred; lower half of doc)
 - Client Plate Number (Vehicle 1 plate — the plaintiff; left side of form)
-- Defendant Name (LAST, FIRST format)
+- Defendant Name (LAST, First Name format)
 - Defendant Plate Number (Vehicle 2 plate)
 - Num Injured (integer; extract from "No. Injured" field top of form)
 - Client Gender (M or F — gender of Vehicle 1 driver; left side of form)
@@ -26,6 +27,7 @@ SYSTEM_PROMPT = """You are a legal data extraction assistant. Extract structured
 - client_city (city only from Vehicle 1 driver address, UPPERCASE, no suffix e.g. "CHICAGO"; left side of form)
 - client_state (state only from Vehicle 1 driver address, UPPERCASE, no suffix e.g. "IL"; left side of form)
 - client_zip_code (zip code only from Vehicle 1 driver address, INTEGER e.g. "60614"; left side of form)
+- client_date_of_birth (YYYY-MM-DD format; left side of form below 'City of Town' field)
 
 Rules:
 - Plaintiff/client is always the Vehicle 1 driver
@@ -72,7 +74,38 @@ def parse_pdf():
                 }
             ],
         )
-        return jsonify({"result": message.content[0].text})
+
+        result_text = message.content[0].text
+
+        # Validate the response to detect corrupted/unreadable files
+        try:
+            # Try to parse the JSON response
+            data = json.loads(result_text)
+
+            # Check for critical fields that indicate a readable police report
+            critical_fields = ["Accident Date", "Defendant Name", "Client Gender",
+                             "client_last_name", "client_first_name"]
+
+            missing_critical = [field for field in critical_fields if field not in data or not data[field]]
+
+            if missing_critical:
+                # File was processed but critical data is missing = corrupted/unreadable
+                return jsonify({
+                    "corrupted_file": True,
+                    "error": "File was parsed but is unreadable or corrupted. Missing critical fields: " + ", ".join(missing_critical),
+                    "result": result_text  # Include partial data for reference
+                }), 200
+
+            return jsonify({"result": result_text})
+
+        except json.JSONDecodeError:
+            # Response is not valid JSON = corrupted file
+            return jsonify({
+                "corrupted_file": True,
+                "error": "File was parsed but returned invalid data format. Unable to extract structured information.",
+                "raw_response": result_text
+            }), 200
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
