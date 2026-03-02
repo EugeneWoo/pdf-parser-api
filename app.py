@@ -15,7 +15,7 @@ SYSTEM_PROMPT = """You are a legal data extraction assistant. Extract structured
 - Accident Location (street address or intersection; lower half of doc)
 - Accident Description (1-2 sentence factual summary of how the accident occurred; lower half of doc)
 - Client Plate Number (Vehicle 1 plate — the plaintiff; left side of form)
-- Defendant Name (LAST, First Name format)
+- Defendant Name (First, LAST format)
 - Defendant Plate Number (Vehicle 2 plate)
 - Num Injured (integer; extract from "No. Injured" field top of form)
 - Client Gender (M or F — gender of Vehicle 1 driver; left side of form)
