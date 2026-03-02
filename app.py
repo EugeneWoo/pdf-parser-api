@@ -22,7 +22,10 @@ SYSTEM_PROMPT = """You are a legal data extraction assistant. Extract structured
 - client_last_name (plaintiff last name, UPPERCASE)
 - client_first_name (plaintiff first name, Title Case)
 - client_street_number (house/building number only from Vehicle 1 driver address e.g. "195"; left side of form)
-- client_street_name (street name only from Vehicle 1 driver address, UPPERCASE, no suffix e.g. "ILLINOIS"; left side of form)
+- client_street_name (street name only from Vehicle 1 driver address, UPPERCASE, no suffix e.g. "ILLINOIS AVENUE"; left side of form)
+- client_city (city only from Vehicle 1 driver address, UPPERCASE, no suffix e.g. "CHICAGO"; left side of form)
+- client_state (state only from Vehicle 1 driver address, UPPERCASE, no suffix e.g. "IL"; left side of form)
+- client_zip_code (zip code only from Vehicle 1 driver address, INTEGER e.g. "60614"; left side of form)
 
 Rules:
 - Plaintiff/client is always the Vehicle 1 driver
